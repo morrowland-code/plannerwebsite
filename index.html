@@ -523,7 +523,7 @@
         );
       }
 
-      function getGapAfter(task, nextStart) {
+      function gapAfter(task, nextStart) {
         const end = task.start + task.duration;
         return hasBlueBetween(end, nextStart) ? 0 : transition;
       }
@@ -538,16 +538,17 @@
         }
 
         if (start >= otherEnd) {
-          return otherEnd + getGapAfter(other, start) > start;
+          return otherEnd + gapAfter(other, start) > start;
         }
 
         return true;
       }
 
-      function shrinkGreensEvenly() {
-        const greens = dayTasks
-          .filter(t => t.type === "green" && !t.removed && t.duration > 0)
-          .sort(sortTasks);
+      function shrinkGreensOneMinuteEach() {
+        const greens = dayTasks.filter(t =>
+          t.type === "green" &&
+          t.duration > 0
+        );
 
         if (greens.length === 0) return false;
 
@@ -563,23 +564,43 @@
       }
 
       function buildSchedule() {
-        const placed = [];
-
         dayTasks.forEach(t => {
-          if (!t.removed) t.start = t.originalStart;
+          t.start = t.originalStart;
+
+          if (t.type === "green") {
+            t.removed = t.duration <= 0;
+          } else {
+            t.removed = false;
+          }
+
+          if (t.type === "blue") {
+            t.duration = 0;
+            t.removed = false;
+          }
         });
 
-        const important = dayTasks
-          .filter(t => (t.type === "purple" || t.type === "red") && !t.removed)
-          .sort(sortTasks);
+        const placed = [];
 
-        const greens = dayTasks
-          .filter(t => t.type === "green" && !t.removed)
-          .sort(sortTasks);
+        const ordered = dayTasks
+          .filter(t =>
+            !t.removed &&
+            (t.type === "purple" || t.type === "red" || t.type === "green")
+          )
+          .sort((a, b) => {
+            const priority = { purple: 0, red: 1, green: 2 };
 
-        const ordered = [...important, ...greens];
+            if (a.originalStart !== b.originalStart) {
+              return a.originalStart - b.originalStart;
+            }
 
-        for (const task of ordered) {
+            if (priority[a.type] !== priority[b.type]) {
+              return priority[a.type] - priority[b.type];
+            }
+
+            return (b.createdAt || 0) - (a.createdAt || 0);
+          });
+
+        ordered.forEach(task => {
           let start = Math.max(task.originalStart, dayStart);
           let safety = 0;
 
@@ -588,28 +609,22 @@
 
             const blocker = placed
               .filter(other => conflictsWith(start, task.duration, other))
-              .sort((a, b) => {
-                if (a.start !== b.start) return a.start - b.start;
-                return (b.createdAt || 0) - (a.createdAt || 0);
-              })[0];
+              .sort((a, b) => a.start - b.start)[0];
 
             if (!blocker) break;
 
-            start = blocker.start + blocker.duration + getGapAfter(blocker, start);
+            start = blocker.start + blocker.duration + gapAfter(blocker, start);
           }
 
-          if (task.duration <= 0 || start + task.duration > dayEnd) {
+          if (start + task.duration > dayEnd || task.duration <= 0) {
             task.removed = true;
             if (task.type === "green") task.duration = 0;
           } else {
             task.start = start;
             placed.push(task);
-            placed.sort((a, b) => {
-              if (a.start !== b.start) return a.start - b.start;
-              return (b.createdAt || 0) - (a.createdAt || 0);
-            });
+            placed.sort((a, b) => a.start - b.start);
           }
-        }
+        });
 
         return dayTasks.some(t =>
           (t.type === "red" || t.type === "purple") && t.removed
@@ -622,26 +637,11 @@
       while (importantFailed && safety < 2000) {
         safety++;
 
-        const didShrink = shrinkGreensEvenly();
+        const didShrink = shrinkGreensOneMinuteEach();
         if (!didShrink) break;
-
-        dayTasks.forEach(t => {
-          if (t.type === "red" || t.type === "purple") {
-            t.removed = false;
-            t.start = t.originalStart;
-            t.duration = t.originalDuration;
-          }
-        });
 
         importantFailed = buildSchedule();
       }
-
-      dayTasks
-        .filter(t => t.type === "blue")
-        .forEach(b => {
-          b.start = b.originalStart;
-          b.duration = 0;
-        });
 
       createTransitions(date, transition);
       save();
