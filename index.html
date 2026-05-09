@@ -559,7 +559,9 @@
 
   const movable = dayTasks
     .filter(t =>
-      (t.type === "red" || t.type === "green")
+      (t.type === "red" || t.type === "green") &&
+      !t.removed
+    )
     .sort(sortTasks);
 
   movable.forEach(task => {
