@@ -493,160 +493,183 @@
     }
 
 
-    function recalculateDay(date) {
-      const transition = Number(document.getElementById("transition").value);
-      const dayStart = timeToMinutes(document.getElementById("dayStart").value);
-      const dayEnd = timeToMinutes(document.getElementById("dayEnd").value);
+  function recalculateDay(date) {
+    const transition = Number(document.getElementById("transition").value);
+    const dayStart = timeToMinutes(document.getElementById("dayStart").value);
+    const dayEnd = timeToMinutes(document.getElementById("dayEnd").value);
 
-      tasks = tasks.filter(t => !(t.date === date && t.autoTransition));
-      const dayTasks = tasks.filter(t => t.date === date);
+    tasks = tasks.filter(t => !(t.date === date && t.autoTransition));
 
-      dayTasks.forEach(t => {
-        t.removed = false;
-        t.start = t.originalStart;
-        t.duration = t.originalDuration;
-        if (t.type === "blue") t.duration = 0;
-        if (!t.createdAt) t.createdAt = Date.now();
+    const dayTasks = tasks.filter(t => t.date === date);
+
+    dayTasks.forEach(t => {
+      t.removed = false;
+      t.start = t.originalStart;
+      t.duration = t.originalDuration;
+
+      if (t.type === "blue") t.duration = 0;
+      if (!t.createdAt) t.createdAt = Date.now();
+    });
+
+    function sortTasks(a, b) {
+      if (a.originalStart !== b.originalStart) {
+        return a.originalStart - b.originalStart;
+      }
+      return (b.createdAt || 0) - (a.createdAt || 0);
+    }
+
+    function hasBlueBetween(gapStart, gapEnd) {
+      return dayTasks.some(t =>
+        t.type === "blue" &&
+        !t.removed &&
+        t.originalStart >= gapStart &&
+        t.originalStart <= gapEnd
+      );
+    }
+
+    function conflictsWith(start, duration, other) {
+      const end = start + duration;
+      const otherEnd = other.start + other.duration;
+
+      if (end <= other.start) {
+        const gap = hasBlueBetween(end, other.start) ? 0 : transition;
+        return end + gap > other.start;
+      }
+
+      if (start >= otherEnd) {
+        const gap = hasBlueBetween(otherEnd, start) ? 0 : transition;
+        return otherEnd + gap > start;
+      }
+
+      return true;
+    }
+
+
+    function buildSchedule() {
+      const placed = [];
+
+      const purples = dayTasks
+        .filter(t => t.type === "purple" && !t.removed)
+        .sort(sortTasks);
+
+      purples.forEach(p => {
+        p.start = p.originalStart;
+        placed.push(p);
       });
 
-      function sortTasks(a, b) {
-        if (a.originalStart !== b.originalStart) return a.originalStart - b.originalStart;
-        return (b.createdAt || 0) - (a.createdAt || 0);
+  const movable = dayTasks
+    .filter(t =>
+      (t.type === "red" || t.type === "green") &&
+      !t.removed
+    )
+    .sort(sortTasks);
+
+  movable.forEach(task => {
+    let start = Math.max(task.originalStart, dayStart);
+    let safety = 0;
+
+    while (safety < 500) {
+      safety++;
+
+      const blocker = placed
+        .filter(other => conflictsWith(start, task.duration, other))
+
+        .sort((a, b) => {
+          if (a.start !== b.start) return a.start - b.start;
+          return (b.createdAt || 0) - (a.createdAt || 0);
+        })[0];
+
+      if (!blocker) break;
+
+      if (task.type === "green") {
+        start = blocker.start + blocker.duration + (hasBlueBetween(blocker.start + blocker.duration, start) ? 0 : transition);
+
+        continue;
       }
 
-      function hasBlueBetween(gapStart, gapEnd) {
-        return dayTasks.some(t =>
-          t.type === "blue" &&
-          !t.removed &&
-          t.originalStart >= gapStart &&
-          t.originalStart <= gapEnd
-        );
+
+      if (task.type === "red") {
+        start = blocker.start + blocker.duration + (hasBlueBetween(blocker.start + blocker.duration, start) ? 0 : transition);
+
+        continue;
       }
 
-      function gapAfter(task, nextStart) {
-        const end = task.start + task.duration;
-        return hasBlueBetween(end, nextStart) ? 0 : transition;
-      }
 
-      function conflictsWith(start, duration, other) {
-        const end = start + duration;
-        const otherEnd = other.start + other.duration;
+    }
 
-        if (end <= other.start) {
-          const gap = hasBlueBetween(end, other.start) ? 0 : transition;
-          return end + gap > other.start;
-        }
+      if (start + task.duration > dayEnd) {
+        if (task.type === "green") {
+          task.duration = Math.max(0, dayEnd - start);
 
-        if (start >= otherEnd) {
-          return otherEnd + gapAfter(other, start) > start;
-        }
-
-        return true;
-      }
-
-      function shrinkGreensOneMinuteEach() {
-        const greens = dayTasks.filter(t =>
-          t.type === "green" &&
-          t.duration > 0
-        );
-
-        if (greens.length === 0) return false;
-
-        greens.forEach(g => {
-          g.duration -= 1;
-          if (g.duration <= 0) {
-            g.duration = 0;
-            g.removed = true;
-          }
-        });
-
-        return true;
-      }
-
-      function buildSchedule() {
-        dayTasks.forEach(t => {
-          t.start = t.originalStart;
-
-          if (t.type === "green") {
-            t.removed = t.duration <= 0;
-          } else {
-            t.removed = false;
-          }
-
-          if (t.type === "blue") {
-            t.duration = 0;
-            t.removed = false;
-          }
-        });
-
-        const placed = [];
-
-        const ordered = dayTasks
-          .filter(t =>
-            !t.removed &&
-            (t.type === "purple" || t.type === "red" || t.type === "green")
-          )
-          .sort((a, b) => {
-            const priority = { purple: 0, red: 1, green: 2 };
-
-            if (a.originalStart !== b.originalStart) {
-              return a.originalStart - b.originalStart;
-            }
-
-            if (priority[a.type] !== priority[b.type]) {
-              return priority[a.type] - priority[b.type];
-            }
-
-            return (b.createdAt || 0) - (a.createdAt || 0);
-          });
-
-        ordered.forEach(task => {
-          let start = Math.max(task.originalStart, dayStart);
-          let safety = 0;
-
-          while (safety < 500) {
-            safety++;
-
-            const blocker = placed
-              .filter(other => conflictsWith(start, task.duration, other))
-              .sort((a, b) => a.start - b.start)[0];
-
-            if (!blocker) break;
-
-            start = blocker.start + blocker.duration + gapAfter(blocker, start);
-          }
-
-          if (start + task.duration > dayEnd || task.duration <= 0) {
+          if (task.duration <= 0) {
             task.removed = true;
-            if (task.type === "green") task.duration = 0;
           } else {
             task.start = start;
             placed.push(task);
-            placed.sort((a, b) => a.start - b.start);
           }
-        });
-
-        return dayTasks.some(t =>
-          (t.type === "red" || t.type === "purple") && t.removed
-        );
+        } else {
+          task.removed = true;
+        }
       }
 
-      let importantFailed = buildSchedule();
-      let safety = 0;
+    else {
+      task.start = start;
 
-      while (importantFailed && safety < 2000) {
-        safety++;
+      placed.push(task);
 
-        const didShrink = shrinkGreensOneMinuteEach();
-        if (!didShrink) break;
-
-        importantFailed = buildSchedule();
-      }
-
-      createTransitions(date, transition);
-      save();
-      render();
+      placed.sort((a, b) => {
+        if (a.start !== b.start) return a.start - b.start;
+        return (b.createdAt || 0) - (a.createdAt || 0);
+      });
     }
+  });
+}
+
+    buildSchedule();
+
+    const importantRemoved = dayTasks.filter(t =>
+      (t.type === "red" || t.type === "purple") && t.removed
+    );
+
+    const activeGreens = dayTasks.filter(t =>
+      t.type === "green" &&
+      !t.removed &&
+      t.duration > 0
+    );
+
+    if (importantRemoved.length > 0 && activeGreens.length > 0) {
+      const minutesNeeded = importantRemoved.reduce(
+        (sum, t) => sum + Math.max(0, (t.start + t.originalDuration) - dayEnd),
+        0
+      );
+
+
+      shrinkGreensEvenly(activeGreens, minutesNeeded);
+
+      dayTasks.forEach(t => {
+        if (t.type === "red" || t.type === "purple") {
+          t.removed = false;
+          t.start = t.originalStart;
+          t.duration = t.originalDuration;
+        }
+      });
+
+      buildSchedule();
+    }
+
+    dayTasks
+      .filter(t => t.type === "blue")
+
+      .forEach(b => {
+        b.start = b.originalStart;
+        b.duration = 0;
+      });
+
+
+    createTransitions(date, transition);
+    save();
+    render();
+  }
 
     function changeMonth(amount) {
       currentMonth += amount;
