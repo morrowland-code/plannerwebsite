@@ -504,9 +504,10 @@
       }
 
       if (task.type === "red") {
-        task.removed = true;
-        return;
+        start = blocker.start + blocker.duration + transition;
+        continue;
       }
+
 
     }
 
