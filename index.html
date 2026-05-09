@@ -597,15 +597,22 @@
 
     }
 
-    
+      if (start + task.duration > dayEnd) {
+        if (task.type === "green") {
+          task.duration = Math.max(0, dayEnd - start);
 
-    if (task.duration <= 0 || start + task.duration > dayEnd) {
-      task.removed = true;
-
-      if (task.type === "green") {
-        task.duration = 0;
+          if (task.duration <= 0) {
+            task.removed = true;
+          } else {
+            task.start = start;
+            placed.push(task);
+          }
+        } else {
+          task.removed = true;
+        }
       }
-    } else {
+
+    else {
       task.start = start;
 
       placed.push(task);
