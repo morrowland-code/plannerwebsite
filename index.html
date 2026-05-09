@@ -497,10 +497,9 @@
 
       if (!blocker) break;
 
-     if (task.type === "green") {
-        task.removed = true;
-        task.duration = 0;
-        return;
+      if (task.type === "green") {
+        start = blocker.start + blocker.duration + transition;
+        continue;
       }
 
       if (task.type === "red") {
