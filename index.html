@@ -732,9 +732,15 @@
         .sort((a, b) => {
           if (a.start !== b.start) return a.start - b.start;
 
-          // same shown time = newest first
+          const order = { red: 0, green: 0, purple: 0, blue: 1, yellow: 2 };
+
+          if (order[a.type] !== order[b.type]) {
+            return order[a.type] - order[b.type];
+          }
+
           return (b.createdAt || 0) - (a.createdAt || 0);
         });
+
 
 
 
