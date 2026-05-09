@@ -643,61 +643,71 @@
 
       buildSchedule();
 
-      const removedGreens = dayTasks.filter(t =>
-        t.type === "green" && t.removed
-      );
+      let totalGreenShrink = 0;
+      let tries = 0;
 
-      const importantRemoved = dayTasks.filter(t =>
-        (t.type === "red" || t.type === "purple") && t.removed
-      );
+      while (tries < 10) {
+        tries++;
 
-      if (removedGreens.length > 0 || importantRemoved.length > 0) {
-        const allGreens = dayTasks.filter(t =>
-          t.type === "green" &&
-          t.originalDuration > 0
+        const removedImportant = dayTasks.filter(t =>
+          (t.type === "red" || t.type === "purple") && t.removed
         );
 
-        const totalRemovedGreenTime = removedGreens.reduce(
-          (sum, t) => sum + t.originalDuration,
-          0
+        const removedGreens = dayTasks.filter(t =>
+          t.type === "green" && t.removed
         );
 
-        const totalImportantRemovedTime = importantRemoved.reduce(
-          (sum, t) => sum + t.originalDuration,
-          0
-        );
-
-        const minutesNeeded = Math.min(
-          30,
-          totalRemovedGreenTime + totalImportantRemovedTime
-        );
-
-        if (allGreens.length > 0) {
-          const each = Math.round(minutesNeeded / allGreens.length);
-
-          allGreens.forEach(g => {
-            g.removed = false;
-            g.start = g.originalStart;
-            g.duration = Math.max(0, g.originalDuration - each);
-
-            if (g.duration <= 0) {
-              g.duration = 0;
-              g.removed = true;
-            }
-          });
-
-          dayTasks.forEach(t => {
-            if (t.type === "red" || t.type === "purple") {
-              t.removed = false;
-              t.start = t.originalStart;
-              t.duration = t.originalDuration;
-            }
-          });
-
-          buildSchedule();
+        if (removedImportant.length === 0 && removedGreens.length === 0) {
+          break;
         }
-      }
 
+        const allGreens = dayTasks.filter(t =>
+          t.type === "green" && t.originalDuration > 0
+        );
+
+        if (allGreens.length === 0) {
+          break;
+        }
+
+        const newestImportant = dayTasks
+          .filter(t => t.type === "red" || t.type === "purple")
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+
+        const minutesNeeded = newestImportant
+          ? newestImportant.originalDuration
+          : 0;
+
+        totalGreenShrink += minutesNeeded;
+
+        dayTasks.forEach(t => {
+          t.removed = false;
+          t.start = t.originalStart;
+          t.duration = t.originalDuration;
+
+          if (t.type === "blue") t.duration = 0;
+        });
+
+        const baseShrink = Math.floor(totalGreenShrink / allGreens.length);
+        let extra = totalGreenShrink % allGreens.length;
+
+        allGreens.forEach(g => {
+          let shrinkAmount = baseShrink;
+
+          if (extra > 0) {
+            shrinkAmount += 1;
+            extra--;
+          }
+
+          g.duration = Math.max(0, g.originalDuration - shrinkAmount);
+
+          if (g.duration <= 0) {
+            g.duration = 0;
+            g.removed = true;
+          }
+        });
+
+        buildSchedule();
+      }
 
 
       dayTasks
