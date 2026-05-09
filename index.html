@@ -499,23 +499,20 @@
 
       if (!blocker) break;
 
-      start = blocker.start + blocker.duration + transition;
-    }
-
-    if (task.type === "green") {
-      const overflow = (start + task.duration) - dayEnd;
-
-      if (overflow > 0) {
-        const allGreens = dayTasks.filter(
-          t =>
-            t.type === "green" &&
-            !t.removed &&
-            t.duration > 0
-        );
-
-        shrinkGreensEvenly(allGreens, overflow);
+     if (task.type === "green") {
+        task.removed = true;
+        task.duration = 0;
+        return;
       }
+
+      if (task.type === "red") {
+        task.removed = true;
+        return;
+      }
+
     }
+
+    
 
     if (task.duration <= 0 || start + task.duration > dayEnd) {
       task.removed = true;
@@ -538,47 +535,7 @@
 
     buildSchedule();
 
-    while (dayTasks.some(t => t.type === "red" && t.removed)) {
-      const greenToShrink = dayTasks
-        .filter(t => t.type === "green" && !t.removed && t.duration > 0)
-        .sort((a, b) => b.originalStart - a.originalStart)[0];
-
-      if (greenToShrink) {
-        greenToShrink.duration = Math.max(0, greenToShrink.duration - 5);
-
-        if (greenToShrink.duration <= 0) {
-          greenToShrink.removed = true;
-        }
-
-        dayTasks.forEach(t => {
-          if (t.type === "red" || t.type === "purple") {
-            t.removed = false;
-            t.start = t.originalStart;
-            t.duration = t.originalDuration;
-          }
-        });
-
-        buildSchedule();
-      } else {
-        break;
-      }
-    }
-
-    // If reds still cannot fit after all greens are gone, remove reds latest first.
-    while (dayTasks.some(t => t.type === "red" && t.removed)) {
-      const redToRemove = dayTasks
-        .filter(t => t.type === "red" && t.removed)
-        .sort((a, b) => b.originalStart - a.originalStart)[0];
-
-      if (!redToRemove) break;
-
-      redToRemove.removed = true;
-
-      break;
-    }
-
-    dayTasks
-      .filter(t => t.type === "blue")
+   
       .forEach(b => {
         b.start = b.originalStart;
         b.duration = 0;
