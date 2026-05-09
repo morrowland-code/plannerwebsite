@@ -513,6 +513,33 @@
       return (b.createdAt || 0) - (a.createdAt || 0);
     }
 
+    function hasBlueBetween(gapStart, gapEnd) {
+      return dayTasks.some(t =>
+        t.type === "blue" &&
+        !t.removed &&
+        t.originalStart >= gapStart &&
+        t.originalStart <= gapEnd
+      );
+    }
+
+    function conflictsWith(start, duration, other) {
+      const end = start + duration;
+      const otherEnd = other.start + other.duration;
+
+      if (end <= other.start) {
+        const gap = hasBlueBetween(end, other.start) ? 0 : transition;
+        return end + gap > other.start;
+      }
+
+      if (start >= otherEnd) {
+        const gap = hasBlueBetween(otherEnd, start) ? 0 : transition;
+        return otherEnd + gap > start;
+      }
+
+      return true;
+    }
+
+
     function buildSchedule() {
       const placed = [];
 
@@ -540,10 +567,8 @@
       safety++;
 
       const blocker = placed
-        .filter(other =>
-          start < other.start + other.duration + transition &&
-          start + task.duration + transition > other.start
-        )
+        .filter(other => conflictsWith(start, task.duration, other))
+
         .sort((a, b) => {
           if (a.start !== b.start) return a.start - b.start;
           return (b.createdAt || 0) - (a.createdAt || 0);
