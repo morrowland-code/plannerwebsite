@@ -637,24 +637,37 @@
       t.duration > 0
     );
 
-    if (importantRemoved.length > 0 && activeGreens.length > 0) {
-      const minutesNeeded = importantRemoved.reduce(
-        (sum, t) => sum + Math.max(0, (t.start + t.originalDuration) - dayEnd),
-        0
-      );
+    let shrinkSafety = 0;
 
+      while (
+        dayTasks.some(t => (t.type === "red" || t.type === "purple") && t.removed) &&
+        dayTasks.some(t => t.type === "green" && t.duration > 0) &&
+        shrinkSafety < 2000
+      ) {
+        shrinkSafety++;
 
-      shrinkGreensEvenly(activeGreens, minutesNeeded);
+        const activeGreens = dayTasks.filter(t =>
+          t.type === "green" &&
+          t.duration > 0
+        );
 
-      dayTasks.forEach(t => {
-        if (t.type === "red" || t.type === "purple") {
-          t.removed = false;
-          t.start = t.originalStart;
-          t.duration = t.originalDuration;
-        }
-      });
+        shrinkGreensEvenly(activeGreens, 1);
 
-      buildSchedule();
+        dayTasks.forEach(t => {
+          if (t.type === "red" || t.type === "purple") {
+            t.removed = false;
+            t.start = t.originalStart;
+            t.duration = t.originalDuration;
+          }
+
+          if (t.type === "green" && t.duration > 0) {
+            t.removed = false;
+          }
+        });
+
+        buildSchedule();
+      }
+
     }
 
     dayTasks
