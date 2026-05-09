@@ -634,7 +634,8 @@
   if (importantRemoved.length > 0) {
     const activeGreens = dayTasks.filter(t =>
       t.type === "green" &&
-      t.duration > 0
+      !t.removed &&
+      t.originalDuration > 0
     );
 
     const minutesNeeded = importantRemoved.reduce(
@@ -643,22 +644,10 @@
     );
 
     if (activeGreens.length > 0) {
-      activeGreens.forEach(g => {
-        g.removed = false;
-      });
-
-      const each = Math.floor(minutesNeeded / activeGreens.length);
-      let extra = minutesNeeded % activeGreens.length;
+      const each = Math.round(minutesNeeded / activeGreens.length);
 
       activeGreens.forEach(g => {
-        let shrinkAmount = each;
-
-        if (extra > 0) {
-          shrinkAmount += 1;
-          extra--;
-        }
-
-        g.duration = Math.max(0, g.duration - shrinkAmount);
+        g.duration = Math.max(0, g.duration - each);
 
         if (g.duration <= 0) {
           g.duration = 0;
@@ -666,12 +655,10 @@
         }
       });
 
-      dayTasks.forEach(t => {
-        if (t.type === "red" || t.type === "purple") {
-          t.removed = false;
-          t.start = t.originalStart;
-          t.duration = t.originalDuration;
-        }
+      importantRemoved.forEach(t => {
+        t.removed = false;
+        t.start = t.originalStart;
+        t.duration = t.originalDuration;
       });
 
       buildSchedule();
