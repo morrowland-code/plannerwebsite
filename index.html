@@ -730,17 +730,13 @@
       const dayTasks = tasks
         .filter(t => t.date === selectedDate && !t.removed)
         .sort((a, b) => {
-          if (a.start !== b.start) return a.start - b.start;
+          const visualTimeA = a.type === "blue" ? a.start - 0.1 : a.start;
+          const visualTimeB = b.type === "blue" ? b.start - 0.1 : b.start;
 
-          const order = { red: 0, green: 0, purple: 0, blue: 1, yellow: 2 };
-
-          if (order[a.type] !== order[b.type]) {
-            return order[a.type] - order[b.type];
-          }
+          if (visualTimeA !== visualTimeB) return visualTimeA - visualTimeB;
 
           return (b.createdAt || 0) - (a.createdAt || 0);
         });
-
 
 
 
