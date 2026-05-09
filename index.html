@@ -162,8 +162,6 @@
       <label>Duration Minutes</label>
       <input id="duration" type="number" value="30" />
 
-      <label>Minimum Minutes</label>
-      <input id="minimum" type="number" value="15" />
 
       <label>Task Type</label>
       <select id="type">
@@ -275,7 +273,7 @@
             originalStart: timeToMinutes(startValue),
             duration,
             originalDuration: duration,
-            minimum: type === "green" || type === "blue" ? 0 : Number(document.getElementById("minimum").value),
+            minimum: 0,
             type,
             droppable: document.getElementById("droppable").checked,
             removed: false,
@@ -536,10 +534,13 @@
     buildSchedule();
 
    
+      dayTasks
+      .filter(t => t.type === "blue")
       .forEach(b => {
         b.start = b.originalStart;
         b.duration = 0;
       });
+
 
     createTransitions(date, transition);
     save();
@@ -790,15 +791,6 @@
                 render();
             }
             }
-        document.getElementById("type").addEventListener("change", function () {
-          if (this.value === "green") {
-            document.getElementById("minimum").value = 0;
-            document.getElementById("minimum").disabled = true;
-          } else {
-            document.getElementById("minimum").disabled = false;
-          }
-        });
-
   </script>
 </body>
 </html>
