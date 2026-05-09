@@ -140,6 +140,51 @@
       }
     }
 
+    body.dark {
+      background: #10131a;
+      color: #e8edf7;
+    }
+
+    body.dark header {
+      background: #1f2937;
+      color: #ffffff;
+    }
+
+    body.dark .box {
+      background: #18202d;
+      box-shadow: 0 6px 12px #00000088;
+    }
+
+    body.dark input,
+    body.dark select,
+    body.dark button {
+      border-color: #3b82f6;
+    }
+
+    body.dark input,
+    body.dark select {
+      background: #0f172a;
+      color: #e8edf7;
+    }
+
+    body.dark button {
+      background: #2563eb;
+      color: white;
+    }
+
+    body.dark button:hover {
+      background: #3b82f6;
+    }
+
+    body.dark .day {
+      background: #111827;
+      border-color: #334155;
+    }
+
+    body.dark .selected {
+      outline-color: #60a5fa;
+    }
+
   </style>
 </head>
 
@@ -161,6 +206,8 @@
 
       <label>Duration Minutes</label>
       <input id="duration" type="number" value="30" />
+
+      
 
 
       <label>Task Type</label>
@@ -193,6 +240,13 @@
 
       <label>Day Ends</label>
       <input id="dayEnd" type="time" value="22:00" />
+
+      <label>Theme</label>
+      <select id="themeSelect" onchange="changeTheme()">
+        <option value="pink">Pink</option>
+        <option value="dark">Dark</option>
+      </select>
+
 
       <p class="small">
         Green = flexible. Red = must stay full length. Purple = fixed time.
@@ -792,6 +846,26 @@
                 render();
             }
             }
+
+        function changeTheme() {
+          const theme = document.getElementById("themeSelect").value;
+
+          if (theme === "dark") {
+            document.body.classList.add("dark");
+          } else {
+            document.body.classList.remove("dark");
+          }
+
+          localStorage.setItem("plannerTheme", theme);
+        }
+
+        const savedTheme = localStorage.getItem("plannerTheme") || "pink";
+        document.getElementById("themeSelect").value = savedTheme;
+
+        if (savedTheme === "dark") {
+          document.body.classList.add("dark");
+        }
+
   </script>
 </body>
 </html>
