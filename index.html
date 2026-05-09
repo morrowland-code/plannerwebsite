@@ -577,13 +577,15 @@
       if (!blocker) break;
 
       if (task.type === "green") {
-        start = blocker.start + blocker.duration + transition;
+        start = blocker.start + blocker.duration + (hasBlueBetween(blocker.start + blocker.duration, start) ? 0 : transition);
+
         continue;
       }
 
 
       if (task.type === "red") {
-        start = blocker.start + blocker.duration + transition;
+        start = blocker.start + blocker.duration + (hasBlueBetween(blocker.start + blocker.duration, start) ? 0 : transition);
+
         continue;
       }
 
@@ -872,7 +874,7 @@
                 localStorage.removeItem("plannerTasks");
                 render();
             }
-            }
+          }
 
         function changeTheme() {
           const theme = document.getElementById("themeSelect").value;
