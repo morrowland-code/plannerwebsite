@@ -224,6 +224,12 @@
       <input id="duration" type="number" value="30" />
 
 
+      <label>End Time</label>
+      <input id="end" type="time" value="08:30" />
+
+      <button onclick="calculateMinutes()">Calculate Minutes</button>
+
+      <p id="minuteAnswer" class="small"></p>
 
 
       <label>Task Type</label>
@@ -246,7 +252,8 @@
         Save your export code somewhere safe.
         Your planner data may reset if the browser cache/site data gets cleared or the website reloads.
 
-        you have to add a 5 minute difference between each task or whatever you want you transition period amount of time to be or else it will push it below the task you want it to be above. so be very exact with the times
+        you have to add a 5 minute difference between each task or whatever you want you transition period amount of
+        time to be or else it will push it below the task you want it to be above. so be very exact with the times
       </p>
 
       <button onclick="enableNotifications()">Enable Notifications</button>
@@ -316,6 +323,31 @@
       const m = String(mins % 60).padStart(2, "0");
       return `${h}:${m}`;
     }
+
+    function calculateMinutes() {
+      const start = document.getElementById("start").value;
+      const end = document.getElementById("end").value;
+
+      if (!start || !end) {
+        alert("Choose both times.");
+        return;
+      }
+
+      let startMins = timeToMinutes(start);
+      let endMins = timeToMinutes(end);
+
+      if (endMins < startMins) {
+        endMins += 1440;
+      }
+
+      const difference = endMins - startMins;
+
+      document.getElementById("duration").value = difference;
+
+      document.getElementById("minuteAnswer").textContent =
+        `${difference} minutes`;
+    }
+
 
     function addTask() {
       const title = document.getElementById("title").value.trim();
